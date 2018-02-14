@@ -4,6 +4,7 @@
 // Pipe the output of the rtlamr to this script (uncomment matching format below)
 // $GOCODE/bin/rtlamr -filterid=12345678 -msgtype=scm -format=json | php rtlamr2sqlite.php
 // $GOCODE/bin/rtlamr -filterid=12345678 -msgtype=scm -format=csv | php rtlamr2sqlite.php
+// Note - the command you run must match the decoder specified below
 
 //Database connect
 $db_handle  = new SQLite3('meter_readings.sqlite3.db');

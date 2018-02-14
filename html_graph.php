@@ -1,4 +1,8 @@
 <?php
+// Matthew Miller
+// 10 Feb 2018
+// This renders a web page with graphs of the power readings
+
 $hourly_db_handle  = new SQLite3('meter_readings.sqlite3.db');
 date_default_timezone_set('America/New_York');
 
