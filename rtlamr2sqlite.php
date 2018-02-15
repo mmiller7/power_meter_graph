@@ -7,8 +7,17 @@
 // Note - the command you run must match the decoder specified below
 
 //Database connect
-$db_handle  = new SQLite3('meter_readings.sqlite3.db');
+$hourly_db_handle  = new SQLite3('meter_readings.sqlite3.db');
+$minute_db_handle  = new SQLite3('minute_meter_readings.sqlite3.db');
 date_default_timezone_set('America/New_York');
+
+//some constants for intervals of interest
+define('NOW',time()); //Current local time as UTC timestamp
+define('MINUTE', 60); //Seconds in minute
+define('FIVE_MIN', 300); //Seconds in 5-min
+define('TEN_MIN', 600); //Seconds in 10-min
+define('HOURLY', 3600); //Seconds in hour
+define('DAILY', 86400); //Seconds in day
 
 //Open stdin to process data
 $f = fopen( 'php://stdin', 'r' );
@@ -35,7 +44,19 @@ while( $line = fgets( $f ) )
 					$meterKwh
 	*/
 
+	insertDbFunction($hourly_db_handle,HOURLY,$rxTimeStr,$meterId,$meterKwh);
 
+	if(isset($minute_db_handle))
+	{
+		insertDbFunction($minute_db_handle,MINUTE,$rxTimeStr,$meterId,$meterKwh,NOW-(2*DAILY));
+	}
+
+}
+
+
+//This function takes the raw meter readings and puts it into the database at specified interval
+function insertDbFunction($db_handle,$interval,$rxTimeStr,$meterId,$meterKwh,$cleanupBefore=0)
+{
 	//Fix the ISO time format so PHP can process it (trim long decimal seconds)
 	$rxTimeStrFixed=preg_replace('/\.[0-9]+/',"",$rxTimeStr);
 
@@ -43,23 +64,22 @@ while( $line = fgets( $f ) )
 	$rxTime=strtotime($rxTimeStrFixed);
 
 	//Get rounded down/up hours
-	$prevHour=intval($rxTime/3600)*3600; //3600 sec per hour, drop fractional part then multiply back
-	//$nextHour=$roundDownTime+3600; //advance to next hour
+	$prevTime=intval($rxTime/$interval)*$interval; //3600 sec per hour, drop fractional part then multiply back
 
 	//Check if we already have a record for the time
-	$query_string='SELECT * FROM readings WHERE timestamp == '.$prevHour;
+	$query_string='SELECT * FROM readings WHERE timestamp == '.$prevTime;
 	$result     = $db_handle->query($query_string);
 	$row        = $result->fetchArray();
 
-	echo "Processing reading for $prevHour rx-time $rxTime ";
+	echo "+ Processing $interval sec reading for $prevTime rx-time $rxTime ";
 
-	//If we found no result for the prevHour timestamp, insert it to the database
+	//If we found no result for the prevTime timestamp, insert it to the database
 	if($row === false)
 	{
 		echo "Inserting into database.";
 
 		//Build insert-statment for database
-		$query_string='INSERT INTO readings VALUES('.$prevHour.','.$rxTime.','.$meterId.','.$meterKwh.')';
+		$query_string='INSERT INTO readings VALUES('.$prevTime.','.$rxTime.','.$meterId.','.$meterKwh.')';
 
 		//Insert into database
 		$db_handle->exec($query_string);
@@ -67,7 +87,20 @@ while( $line = fgets( $f ) )
 	}
 	echo PHP_EOL;
 
+	//If a cleanup start-date is specified, purge older records
+	if($cleanupBefore !== 0)
+	{
+		echo "- Purging $interval sec readings prior to $cleanupBefore".PHP_EOL;
+
+		//Build delete-statment for database
+		$query_string='DELETE FROM readings WHERE timestamp < '.$cleanupBefore;
+
+		//Insert into database
+		$db_handle->exec($query_string);
+	}
 }
+
+
 
 fclose( $f );
 

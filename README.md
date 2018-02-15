@@ -13,6 +13,9 @@ This script runs on a web-server and pulls data out of the SQLite database and r
 * meter_readings.sqlite3.db.empty
 This is the SQLite database and spare empty copy (in case you manage to corrupt it or want to start over)
 
+* minute_meter_readings.sqlite3.db
+This is a SQLite database for storing very recent rolling metrics that are updated with greater frequency.
+If you are running it on a SD card such as Raspberry pi you probably want to put this in a tempfs.
 
 The following files are decoding "plugins" for rtlamr2sqlite to process different output formats.
 This is useful if you have been dumping data to a file (e.g. CSV) and want to switch to a nicer format.

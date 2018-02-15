@@ -1,19 +1,30 @@
 <?php
 $hourly_db_handle	= new SQLite3('meter_readings.sqlite3.db');
+$minute_db_handle  = new SQLite3('minute_meter_readings.sqlite3.db');
 date_default_timezone_set('America/New_York');
+
+//Hour threshold for hourly color coding
+define('MORNING_HR', 5);
+define('DAYTIME_HR', 8);
+define('EVENING_HR', 17);
+define('NIGHT_HR', 20);
 
 
 
 //constants
+define('MINUTE', 60); //Seconds in minute
+define('FIVE_MIN', 300); //Seconds in 5-min
+define('TEN_MIN', 600); //Seconds in 10-min
 define('HOURLY', 3600); //Seconds in hour
 define('DAILY', 86400); //Seconds in day
 define('WEEKLY', 604800); //Seconds in week
 define('MONTHLY', 2629743); //Seconds in month (avg 30.44 days)
 
 define('NOW',time()); //Current local time as UTC timestamp
+define('THIS_HOUR',intval(NOW/3600)*3600);
 define('TODAY', strtotime('today midnight')); //Midnight local time as UTC timestamp
 define('YESTERDAY', strtotime('yesterday midnight')); //Midnight local time as UTC timestamp
-//define('LAST_SUNDAY', strtotime('midnight last sunday')); //Midnight 1st of this-month local time as UTC timestamp
+define('LAST_SUNDAY', strtotime('midnight last sunday')); //Midnight 1st of this-month local time as UTC timestamp
 define('THIS_MONTH', strtotime('midnight first day of this month')); //Midnight 1st of this-month local time as UTC timestamp
 define('LAST_MONTH', strtotime('midnight first day of last month')); //Midnight 1st of last-month local time as UTC timestamp
 define('THIS_YEAR', strtotime('midnight first day of january this year')); //Midnight this year New Year's Day as UTC timestamp
@@ -24,12 +35,6 @@ define('LAST_YEAR', strtotime('midnight first day of january last year')); //Mid
 		This will probably do something funky for daylight-savings during
 		the hour that is skipped or repeated, I'm not sure.
 	*/
-
-//Hour threshold for hourly color coding
-define('MORNING_HR', 5);
-define('DAYTIME_HR', 8);
-define('EVENING_HR', 17);
-define('NIGHT_HR', 20);
 
 //Timezone offset calculations
 $dt = new DateTime("now");
@@ -46,8 +51,6 @@ define('TIMEZONE_OFFSET',$tz_offset);
 //optional additional offset (e.g. to add approximage delta for billing cycle start day)
 function graphFunction($graphName,$db_handle,$startTime,$endTime,$interval,$offset = 0)
 {
-
-
 	//Query the DB
 	$query_string='SELECT * FROM readings WHERE timestamp >= '.$startTime.' AND timestamp <= '.$endTime.' AND ( timestamp + '.TIMEZONE_OFFSET.' + '.$offset.' ) % '.$interval.' == 0';
 	$result = $db_handle->query($query_string);
@@ -227,8 +230,10 @@ function graphFunction($graphName,$db_handle,$startTime,$endTime,$interval,$offs
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <body>
 <center>
-<?php graphFunction("Usage Today",$hourly_db_handle,TODAY,NOW,HOURLY); ?>
-<?php graphFunction("Usage Yesterday",$hourly_db_handle,YESTERDAY,TODAY,HOURLY); ?>
+<?php //graphFunction("Current Hour",$minute_db_handle,THIS_HOUR,NOW,MINUTE); ?>
+
+<?php graphFunction("Hourly Usage Today",$hourly_db_handle,TODAY,NOW,HOURLY); ?>
+<?php graphFunction("Hourly Usage Yesterday",$hourly_db_handle,YESTERDAY,TODAY,HOURLY); ?>
 
 <?php //graphFunction("Hourly Past 72 Hours",$hourly_db_handle,NOW-(72*HOURLY),NOW,HOURLY); ?>
 
