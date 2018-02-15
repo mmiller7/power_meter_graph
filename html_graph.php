@@ -220,6 +220,43 @@ function graphFunction($graphName,$db_handle,$startTime,$endTime,$interval,$offs
 
 	} //end of if-check is first row valid
 } //end of graph generator function
+
+
+
+//Prints estimated instantanious(-ish) stats
+//from the database specified
+//defaults to offset equal to timezone (to correct for midnight time)
+function estimateCurrentPowerFunction($db_handle)
+{
+	//Query the DB
+	$query_string='SELECT * FROM readings ORDER BY timestamp DESC LIMIT 2';
+	$result = $db_handle->query($query_string);
+	$row = $result->fetchArray();
+
+	if($row === false) //If the first row returned nothing there is no data to process, don't try and graph!
+	{
+		echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">Estimated Current Power - No data available.</p>'.PHP_EOL;
+	}
+	else
+	{
+		$currentRecord=$row;
+		$row = $result->fetchArray();
+		$prevRecord=$row;
+
+		$kwhUsed=$currentRecord['kwh']-$prevRecord['kwh'];
+		$eTimeSeconds=$currentRecord['timestamp_rx']-$prevRecord['timestamp_rx'];
+		$eTimeHours=$eTimeSeconds/3600;
+
+		//Compute the time factor to multiply by so time cancels leaving instant average current
+		$timeScalor=1/$eTimeHours;
+
+		//Multiply to cancel time-units and get power
+		$estimatedPower=$kwhUsed*$timeScalor;
+
+		//echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">Estimated Current Power Draw - '.number_format($estimatedPower,2).'kWh avg over past '.number_format($eTimeSeconds,0).' seconds</p>'.PHP_EOL;
+		echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">Estimated Current Power Draw - '.number_format($estimatedPower,2).'kWh</p>'.PHP_EOL;
+	}
+}
 ?>
 
 
@@ -230,6 +267,7 @@ function graphFunction($graphName,$db_handle,$startTime,$endTime,$interval,$offs
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <body>
 <center>
+<?php estimateCurrentPowerFunction($minute_db_handle); ?>
 <?php //graphFunction("Current Hour",$minute_db_handle,THIS_HOUR,NOW,MINUTE); ?>
 
 <?php graphFunction("Hourly Usage Today",$hourly_db_handle,TODAY,NOW,HOURLY); ?>
