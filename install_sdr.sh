@@ -10,6 +10,7 @@ fi
 
 
 echo '**** Installing dependencies ****'
+apt-get update
 apt-get -y install git golang-go
 
 echo '**** Installing rtlamr decoder ****'
