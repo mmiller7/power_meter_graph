@@ -13,8 +13,8 @@ echo '**** Installing dependencies ****'
 apt-get -y install git golang-go
 
 echo '**** Installing rtlamr decoder ****'
-mkdir /opt/rtlamr
-export $GOPATH=/opt/rtlamr
+mkdir -p /opt/rtlamr
+export GOPATH=/opt/rtlamr
 go get github.com/bemasher/rtlamr
 ln -s /opt/rtlamr/bin/rtlamr /usr/local/bin
 
