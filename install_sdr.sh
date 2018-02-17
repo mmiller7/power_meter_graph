@@ -10,7 +10,7 @@ fi
 
 
 echo '**** Installing dependencies ****'
-apt-get -y install git install golang-go
+apt-get -y install git golang-go
 
 echo '**** Installing rtlamr decoder ****'
 mkdir /opt/rtlamr
