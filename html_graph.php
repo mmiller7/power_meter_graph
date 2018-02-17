@@ -13,6 +13,7 @@ define('NIGHT_HR', 20);
 
 //constants
 define('MINUTE', 60); //Seconds in minute
+define('TWO_MIN', 120); //Seconds in 5-min
 define('FIVE_MIN', 300); //Seconds in 5-min
 define('TEN_MIN', 600); //Seconds in 10-min
 define('HOURLY', 3600); //Seconds in hour
@@ -49,7 +50,7 @@ define('TIMEZONE_OFFSET',$tz_offset);
 //with each bar representing the time-interval $interval.
 //defaults to offset equal to timezone (to correct for midnight time)
 //optional additional offset (e.g. to add approximage delta for billing cycle start day)
-function graphFunction($graphName,$db_handle,$startTime,$endTime,$interval,$offset = 0)
+function graphKwhConsumed($graphName,$db_handle,$startTime,$endTime,$interval,$offset = 0)
 {
 	//Query the DB
 	$query_string='SELECT * FROM readings WHERE timestamp >= '.$startTime.' AND timestamp <= '.$endTime.' AND ( timestamp + '.TIMEZONE_OFFSET.' + '.$offset.' ) % '.$interval.' == 0';
@@ -204,7 +205,8 @@ function graphFunction($graphName,$db_handle,$startTime,$endTime,$interval,$offs
 				title: '<?php echo "$graphName (Total Usage: ".number_format($totalKwhUsed,2).")"; ?>',
 				yaxis: {
 					fixedrange: true,
-					zeroline: false,
+					zeroline: true,
+					rangemode: 'tozero',
 					gridwidth: 2
 				},
 				xaxis: {
@@ -219,14 +221,146 @@ function graphFunction($graphName,$db_handle,$startTime,$endTime,$interval,$offs
 		//Okay - we're done graphing it
 
 	} //end of if-check is first row valid
-} //end of graph generator function
+} //end of graphKwhConsumed
+
+
+
+//Creates a graph of average power draw (killowatts) with the name (title) specified (avoid special chars)
+//from the database specified
+//Spanning the duration from $startTime to $endTime (inclusive)
+//with line points representing the time-interval $interval.
+//defaults to offset equal to timezone (to correct for midnight time)
+//optional additional offset (e.g. to add approximage delta for billing cycle start day)
+function graphPowerDraw($graphName,$db_handle,$startTime,$endTime,$interval,$offset = 0)
+{
+	//Query the DB
+	$query_string='SELECT * FROM readings WHERE timestamp >= '.$startTime.' AND timestamp <= '.$endTime.' AND ( timestamp + '.TIMEZONE_OFFSET.' + '.$offset.' ) % '.$interval.' == 0';
+	$result = $db_handle->query($query_string);
+	$row = $result->fetchArray();
+
+	//echo 'console.log(\'Name='.$graphName.'\');'.PHP_EOL;
+	//echo 'console.log(\'query_string='.$query_string.'\');'.PHP_EOL;
+	//echo 'console.log(\'first_row='.$row.'\');'.PHP_EOL;
+
+	if($row === false) //If the first row returned nothing there is no data to process, don't try and graph!
+	{
+		echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">'.$graphName.' - No data available.</p>'.PHP_EOL;
+	}
+	else
+	{
+		//Prepare the data set for the graph
+		$x='x: [';
+		$y='y: [';
+		$color='color: [';
+
+		//Used to init the data so we can display the power-used over
+		//the hour stated (e.g. 8AM is 8AM-9AM consumption)
+		$prevRow=$row;
+		$row = $result->fetchArray();
+
+		$startKwh=$prevRow['kwh']; //used to calc total
+
+		//Used by the loop to handle adding commas between values
+		$firstRun=true;
+		while($row !== false)
+		{
+			//If this isn't the first value in the list, add comma separators
+			if(!$firstRun)
+			{
+				$x=$x.',';
+				$y=$y.',';
+			}
+			$firstRun=false;
+
+			//Format the X-axis labels
+			$time_units=date('Y/m/d H:i',$prevRow['timestamp']);
+			if($interval < DAILY)
+			{
+				if($endTime-$startTime > DAILY)
+				{
+					//X-axis units for hourly over multiple days
+					$time_units=date('H:i - m/d',$prevRow['timestamp']);
+					$hour=date('H',$prevRow['timestamp']);
+					if($hour == 0)
+					{
+						$time_units='<b>'.$time_units.'</b>';
+					}
+				}
+				else
+				{
+					//X-axis units for hourly over a single day
+					$time_units=date('H:i',$prevRow['timestamp']);
+				}
+			}
+			else if($interval == DAILY)
+			{
+				$time_units=date('M-d',$prevRow['timestamp']);
+			}
+			else if($interval > DAILY)
+			{
+				$time_units=date('Y/m/d',$prevRow['timestamp']);
+			}
+
+			//Calculate the kwh used between meter reading interval
+			$kwhUsed=$row['kwh']-$prevRow['kwh'];
+			$eTime=$row['timestamp_rx']-$prevRow['timestamp_rx'];
+			$eTimeHours=$eTime/3600;
+
+			//Compute the time factor to multiply by so time cancels leaving instant average current
+			$timeScalor=1/$eTimeHours;
+
+			//Multiply to cancel time-units and get power
+			$avgPower=$kwhUsed*$timeScalor;
+
+			//Append the data to the graph data-set
+			$x=$x.'\''.$time_units.'\'';
+			$y=$y.'\''.$avgPower.'\'';
+
+			//Get the next row of the data-set
+			$prevRow=$row;
+			$row = $result->fetchArray();
+		}
+		//Close the graph data-set
+		$x=$x.'],';
+		$y=$y.'],';
+
+		//Now that we have all the data, let's try and draw the graph
+		?>
+		<div id="<?php echo $graphName; ?>"><!-- Plotly chart will be drawn inside this DIV --></div>
+			<script>
+				var data = [
+					{
+						<?php echo $x.PHP_EOL; ?>
+						<?php echo $y.PHP_EOL; ?>
+						mode: 'lines',
+					}
+			];
+			var layout = {
+				title: '<?php echo "$graphName"; ?>',
+				yaxis: {
+					fixedrange: true,
+					zeroline: true,
+					rangemode: 'tozero',
+					gridwidth: 2
+				},
+				xaxis: {
+					fixedrange: true
+				}
+			};
+			Plotly.newPlot('<?php echo $graphName; ?>', data, layout);
+		</script>
+		<?php
+		//Okay - we're done graphing it
+
+	} //end of if-check is first row valid
+} //end of graphPowerDraw
 
 
 
 //Prints estimated instantanious(-ish) stats
 //from the database specified
 //defaults to offset equal to timezone (to correct for midnight time)
-function estimateCurrentPowerFunction($db_handle)
+function estimateCurrentPower($db_handle)
 {
 	//Query the DB
 	$query_string='SELECT * FROM readings ORDER BY timestamp DESC LIMIT 2';
@@ -267,19 +401,20 @@ function estimateCurrentPowerFunction($db_handle)
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <body>
 <center>
-<?php estimateCurrentPowerFunction($minute_db_handle); ?>
-<?php //graphFunction("Current Hour",$minute_db_handle,THIS_HOUR,NOW,MINUTE); ?>
+<?php estimateCurrentPower($minute_db_handle); ?>
+<?php //graphKwhConsumed("Current Hour",$minute_db_handle,THIS_HOUR,NOW,MINUTE); ?>
+<?php graphPowerDraw("Current Hour Power Draw (kW)",$minute_db_handle,THIS_HOUR,NOW,TWO_MIN); ?>
 
-<?php graphFunction("Hourly Usage Today",$hourly_db_handle,TODAY,NOW,HOURLY); ?>
-<?php graphFunction("Hourly Usage Yesterday",$hourly_db_handle,YESTERDAY,TODAY,HOURLY); ?>
+<?php graphKwhConsumed("Hourly Usage Today",$hourly_db_handle,TODAY,NOW,HOURLY); ?>
+<?php graphKwhConsumed("Hourly Usage Yesterday",$hourly_db_handle,YESTERDAY,TODAY,HOURLY); ?>
 
-<?php //graphFunction("Hourly Past 72 Hours",$hourly_db_handle,NOW-(72*HOURLY),NOW,HOURLY); ?>
+<?php //graphKwhConsumed("Hourly Past 72 Hours",$hourly_db_handle,NOW-(72*HOURLY),NOW,HOURLY); ?>
 
-<?php graphFunction("Daily Usage This Month",$hourly_db_handle,THIS_MONTH,TODAY,DAILY); ?>
-<?php graphFunction("Daily Usage Last Month",$hourly_db_handle,LAST_MONTH,THIS_MONTH,DAILY); ?>
+<?php graphKwhConsumed("Daily Usage This Month",$hourly_db_handle,THIS_MONTH,TODAY,DAILY); ?>
+<?php graphKwhConsumed("Daily Usage Last Month",$hourly_db_handle,LAST_MONTH,THIS_MONTH,DAILY); ?>
 
-<?php graphFunction("Monthly Usage This Year",$hourly_db_handle,THIS_YEAR,TODAY,MONTHLY); ?>
-<?php graphFunction("Monthly Usage Last Year",$hourly_db_handle,LAST_YEAR,THIS_YEAR,MONTHLY); ?>
+<?php graphKwhConsumed("Monthly Usage This Year",$hourly_db_handle,THIS_YEAR,TODAY,MONTHLY); ?>
+<?php graphKwhConsumed("Monthly Usage Last Year",$hourly_db_handle,LAST_YEAR,THIS_YEAR,MONTHLY); ?>
 </center>
 
 <br><br><br><br>
