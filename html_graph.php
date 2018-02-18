@@ -3,6 +3,8 @@ $hourly_db_handle	= new SQLite3('meter_readings.sqlite3.db');
 $minute_db_handle  = new SQLite3('minute_meter_readings.sqlite3.db');
 date_default_timezone_set('America/New_York');
 
+$meterId   = getUrlInt('meterId');
+
 //Hour threshold for hourly color coding
 define('MORNING_HR', 5);
 define('DAYTIME_HR', 8);
@@ -50,10 +52,10 @@ define('TIMEZONE_OFFSET',$tz_offset);
 //with each bar representing the time-interval $interval.
 //defaults to offset equal to timezone (to correct for midnight time)
 //optional additional offset (e.g. to add approximage delta for billing cycle start day)
-function graphKwhConsumed($graphName,$db_handle,$startTime,$endTime,$interval,$offset = 0)
+function graphKwhConsumed($graphName,$db_handle,$meterId,$startTime,$endTime,$interval,$offset = 0)
 {
 	//Query the DB
-	$query_string='SELECT * FROM readings WHERE timestamp >= '.$startTime.' AND timestamp <= '.$endTime.' AND ( timestamp + '.TIMEZONE_OFFSET.' + '.$offset.' ) % '.$interval.' == 0';
+	$query_string='SELECT * FROM readings WHERE meter_id == '.$meterId.' AND timestamp >= '.$startTime.' AND timestamp <= '.$endTime.' AND ( timestamp + '.TIMEZONE_OFFSET.' + '.$offset.' ) % '.$interval.' == 0';
 	$result = $db_handle->query($query_string);
 	$row = $result->fetchArray();
 
@@ -231,10 +233,10 @@ function graphKwhConsumed($graphName,$db_handle,$startTime,$endTime,$interval,$o
 //with line points representing the time-interval $interval.
 //defaults to offset equal to timezone (to correct for midnight time)
 //optional additional offset (e.g. to add approximage delta for billing cycle start day)
-function graphPowerDraw($graphName,$db_handle,$startTime,$endTime,$interval,$offset = 0)
+function graphPowerDraw($graphName,$db_handle,$meterId,$startTime,$endTime,$interval,$offset = 0)
 {
 	//Query the DB
-	$query_string='SELECT * FROM readings WHERE timestamp >= '.$startTime.' AND timestamp <= '.$endTime.' AND ( timestamp + '.TIMEZONE_OFFSET.' + '.$offset.' ) % '.$interval.' == 0';
+	$query_string='SELECT * FROM readings WHERE meter_id == '.$meterId.' AND timestamp >= '.$startTime.' AND timestamp <= '.$endTime.' AND ( timestamp + '.TIMEZONE_OFFSET.' + '.$offset.' ) % '.$interval.' == 0';
 	$result = $db_handle->query($query_string);
 	$row = $result->fetchArray();
 
@@ -360,10 +362,10 @@ function graphPowerDraw($graphName,$db_handle,$startTime,$endTime,$interval,$off
 //Prints estimated instantanious(-ish) stats
 //from the database specified
 //defaults to offset equal to timezone (to correct for midnight time)
-function estimateCurrentPower($db_handle)
+function estimateCurrentPower($db_handle,$meterId)
 {
 	//Query the DB
-	$query_string='SELECT * FROM readings ORDER BY timestamp DESC LIMIT 2';
+	$query_string='SELECT * FROM readings WHERE meter_id == '.$meterId.' ORDER BY timestamp DESC LIMIT 2';
 	$result = $db_handle->query($query_string);
 	$row = $result->fetchArray();
 
@@ -391,6 +393,87 @@ function estimateCurrentPower($db_handle)
 		echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">Estimated Current Power Draw - '.number_format($estimatedPower,2).'kWh</p>'.PHP_EOL;
 	}
 }
+
+
+
+//Gets a list of meters in the database
+function getMeterIdList($db_handle)
+{
+	//Query the DB
+	$query_string='SELECT meter_id FROM readings UNIQUE';
+	$result = $db_handle->query($query_string);
+	$row = $result->fetchArray();
+
+	if($row === false) //If the first row returned nothing there is no data to process, don't try and graph!
+	{
+		echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">List of meters - No data available.</p>'.PHP_EOL;
+	}
+	else
+	{
+		$currentRecord=$row;
+		$row = $result->fetchArray();
+		$prevRecord=$row;
+
+		echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">Placeholder for list of meters</p>'.PHP_EOL;
+	}
+}
+
+
+
+
+//Get URL data if it exists
+function getUrlStr($field)
+{
+	if(isset($field))
+	{
+		return $_GET[$field];
+	}
+	else
+	{
+		return false;
+	}
+}
+
+//Get URL data if it exists
+function getUrlInt($field)
+{
+	if(isset($field))
+	{
+		return intval($_GET[$field]);
+	}
+	else
+	{
+		return false;
+	}
+}
+
+
+
+if($meterId === null) //no meter ID specified
+{
+?>
+
+
+
+<html>
+<head>
+</head>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<body>
+<center>
+<?php getMeterIdList($hourly_db_handle); ?>
+
+<br><br><br><br>
+
+</body>
+</html>
+
+
+
+<?php
+}
+else //meter ID specified
+{
 ?>
 
 
@@ -402,22 +485,28 @@ function estimateCurrentPower($db_handle)
 <body>
 <center>
 <?php estimateCurrentPower($minute_db_handle); ?>
-<?php //graphKwhConsumed("Current Hour",$minute_db_handle,THIS_HOUR,NOW,MINUTE); ?>
-<?php graphPowerDraw("Current Hour Power Draw (kW)",$minute_db_handle,THIS_HOUR,NOW,TWO_MIN); ?>
+<?php //graphKwhConsumed("Current Hour",$minute_db_handle,$meterId,THIS_HOUR,NOW,MINUTE); ?>
+<?php graphPowerDraw("Current Hour Power Draw (kW)",$minute_db_handle,$meterId,THIS_HOUR,NOW,TWO_MIN); ?>
 
-<?php graphKwhConsumed("Hourly Usage Today",$hourly_db_handle,TODAY,NOW,HOURLY); ?>
-<?php graphKwhConsumed("Hourly Usage Yesterday",$hourly_db_handle,YESTERDAY,TODAY,HOURLY); ?>
+<?php graphKwhConsumed("Hourly Usage Today",$hourly_db_handle,$meterId,TODAY,NOW,HOURLY); ?>
+<?php graphKwhConsumed("Hourly Usage Yesterday",$hourly_db_handle,$meterId,YESTERDAY,TODAY,HOURLY); ?>
 
-<?php //graphKwhConsumed("Hourly Past 72 Hours",$hourly_db_handle,NOW-(72*HOURLY),NOW,HOURLY); ?>
+<?php //graphKwhConsumed("Hourly Past 72 Hours",$hourly_db_handle,$meterId,NOW-(72*HOURLY),NOW,HOURLY); ?>
 
-<?php graphKwhConsumed("Daily Usage This Month",$hourly_db_handle,THIS_MONTH,TODAY,DAILY); ?>
-<?php graphKwhConsumed("Daily Usage Last Month",$hourly_db_handle,LAST_MONTH,THIS_MONTH,DAILY); ?>
+<?php graphKwhConsumed("Daily Usage This Month",$hourly_db_handle,$meterId,THIS_MONTH,TODAY,DAILY); ?>
+<?php graphKwhConsumed("Daily Usage Last Month",$hourly_db_handle,$meterId,LAST_MONTH,THIS_MONTH,DAILY); ?>
 
-<?php graphKwhConsumed("Monthly Usage This Year",$hourly_db_handle,THIS_YEAR,TODAY,MONTHLY); ?>
-<?php graphKwhConsumed("Monthly Usage Last Year",$hourly_db_handle,LAST_YEAR,THIS_YEAR,MONTHLY); ?>
+<?php graphKwhConsumed("Monthly Usage This Year",$hourly_db_handle,$meterId,THIS_YEAR,TODAY,MONTHLY); ?>
+<?php graphKwhConsumed("Monthly Usage Last Year",$hourly_db_handle,$meterId,LAST_YEAR,THIS_YEAR,MONTHLY); ?>
 </center>
 
 <br><br><br><br>
 
 </body>
 </html>
+
+
+
+<?php
+}
+?>
