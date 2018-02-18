@@ -1,7 +1,5 @@
 <?php
-$hourly_db_handle	= new SQLite3('meter_readings.sqlite3.db');
-$minute_db_handle  = new SQLite3('minute_meter_readings.sqlite3.db');
-date_default_timezone_set('America/New_York');
+include 'system_config.php';
 
 $meterId   = getUrlInt('meterId');
 
