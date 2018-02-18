@@ -6,6 +6,9 @@
 // $GOCODE/bin/rtlamr -filterid=12345678 -msgtype=scm -format=csv | php rtlamr2sqlite.php
 // Note - the command you run must match the decoder specified below
 
+//Debug enable-disable
+define('DEBUG', false);
+
 //Database connect
 include 'system_config.php';
 
@@ -69,12 +72,14 @@ function insertDbFunction($db_handle,$interval,$rxTimeStr,$meterId,$meterKwh,$cl
 	$result     = $db_handle->query($query_string);
 	$row        = $result->fetchArray();
 
-	echo "+ Processing $interval sec reading for $prevTime rx-time $rxTime ";
+	if(DEBUG)
+		echo "+ Processing $interval sec reading for $prevTime rx-time $rxTime ";
 
 	//If we found no result for the prevTime timestamp, insert it to the database
 	if($row === false)
 	{
-		echo "Inserting into database.";
+		if(DEBUG)
+			echo "Inserting into database.";
 
 		//Build insert-statment for database
 		$query_string='INSERT INTO readings VALUES('.$prevTime.','.$rxTime.','.$meterId.','.$meterKwh.')';
@@ -83,12 +88,14 @@ function insertDbFunction($db_handle,$interval,$rxTimeStr,$meterId,$meterKwh,$cl
 		$db_handle->exec($query_string);
 
 	}
-	echo PHP_EOL;
+	if(DEBUG)
+		echo PHP_EOL;
 
 	//If a cleanup start-date is specified, purge older records
 	if($cleanupBefore !== 0)
 	{
-		echo "- Purging $interval sec readings prior to $cleanupBefore".PHP_EOL;
+		if(DEBUG)
+			echo "- Purging $interval sec readings prior to $cleanupBefore".PHP_EOL;
 
 		//Build delete-statment for database
 		$query_string='DELETE FROM readings WHERE timestamp < '.$cleanupBefore;

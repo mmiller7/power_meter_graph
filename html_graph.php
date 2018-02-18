@@ -398,31 +398,58 @@ function estimateCurrentPower($db_handle,$meterId)
 function getMeterIdList($db_handle)
 {
 	//Query the DB
-	$query_string='SELECT meter_id FROM readings UNIQUE';
+	$query_string='SELECT DISTINCT meter_id FROM readings ORDER BY meter_id';
 	$result = $db_handle->query($query_string);
 	$row = $result->fetchArray();
 
-	if($row === false) //If the first row returned nothing there is no data to process, don't try and graph!
-	{
-		echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">List of meters - No data available.</p>'.PHP_EOL;
-	}
-	else
-	{
-		$currentRecord=$row;
-		$row = $result->fetchArray();
-		$prevRecord=$row;
+	//Array to store meter IDs
+	$meters = array();
 
-		echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">Placeholder for list of meters</p>'.PHP_EOL;
+	//Iterate thru DB results
+	while($row !== false)
+	{
+		// Add entries to the list of meters
+		array_push($meters,$row['meter_id']);
+	
+		$row = $result->fetchArray();
 	}
+
+	return $meters;
 }
 
+
+
+//Generate drop-down list of meters to pick from
+function meterListSelection($db_handle,$default=false)
+{
+	$meters = getMeterIdList($db_handle);
+
+	echo '<form action="html_graph.php">'.PHP_EOL;
+	echo 'Meter ID: '.PHP_EOL;
+	echo '<select name="meterId">'.PHP_EOL;
+	foreach($meters as $meter)
+	{
+		if($default === $meter)
+		{
+			echo '<option value="'.$meter.'" selected=true>'.$meter.'</option>'.PHP_EOL;
+		}
+		else
+		{
+			echo '<option value="'.$meter.'">'.$meter.'</option>'.PHP_EOL;
+		}
+	}
+	echo '</select>'.PHP_EOL;
+	echo '<input type="submit" value="Update Graphs">'.PHP_EOL;
+	echo '</form>'.PHP_EOL;
+	echo '<br>'.PHP_EOL;
+}
 
 
 
 //Get URL data if it exists
 function getUrlStr($field)
 {
-	if(isset($field))
+	if(isset($_GET[$field]))
 	{
 		return $_GET[$field];
 	}
@@ -435,7 +462,7 @@ function getUrlStr($field)
 //Get URL data if it exists
 function getUrlInt($field)
 {
-	if(isset($field))
+	if(isset($_GET[$field]))
 	{
 		return intval($_GET[$field]);
 	}
@@ -445,11 +472,8 @@ function getUrlInt($field)
 	}
 }
 
-
-
-if($meterId === null) //no meter ID specified
-{
 ?>
+
 
 
 
@@ -459,43 +483,28 @@ if($meterId === null) //no meter ID specified
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <body>
 <center>
-<?php getMeterIdList($hourly_db_handle); ?>
-
-<br><br><br><br>
-
-</body>
-</html>
-
-
 
 <?php
-}
-else //meter ID specified
+meterListSelection($hourly_db_handle,$meterId);
+
+if($meterId !== false) //no meter ID specified
 {
+	estimateCurrentPower($minute_db_handle,$meterId);
+	//graphKwhConsumed("Current Hour",$minute_db_handle,$meterId,THIS_HOUR,NOW,MINUTE);
+	graphPowerDraw("Current Hour Power Draw (kW)",$minute_db_handle,$meterId,THIS_HOUR,NOW,TWO_MIN);
+
+	graphKwhConsumed("Hourly Usage Today",$hourly_db_handle,$meterId,TODAY,NOW,HOURLY);
+	graphKwhConsumed("Hourly Usage Yesterday",$hourly_db_handle,$meterId,YESTERDAY,TODAY,HOURLY);
+
+	//graphKwhConsumed("Hourly Past 72 Hours",$hourly_db_handle,$meterId,NOW-(72*HOURLY),NOW,HOURLY);
+
+	graphKwhConsumed("Daily Usage This Month",$hourly_db_handle,$meterId,THIS_MONTH,TODAY,DAILY);
+	graphKwhConsumed("Daily Usage Last Month",$hourly_db_handle,$meterId,LAST_MONTH,THIS_MONTH,DAILY);
+
+	graphKwhConsumed("Monthly Usage This Year",$hourly_db_handle,$meterId,THIS_YEAR,TODAY,MONTHLY);
+	graphKwhConsumed("Monthly Usage Last Year",$hourly_db_handle,$meterId,LAST_YEAR,THIS_YEAR,MONTHLY);
 ?>
 
-
-
-<html>
-<head>
-</head>
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<body>
-<center>
-<?php estimateCurrentPower($minute_db_handle); ?>
-<?php //graphKwhConsumed("Current Hour",$minute_db_handle,$meterId,THIS_HOUR,NOW,MINUTE); ?>
-<?php graphPowerDraw("Current Hour Power Draw (kW)",$minute_db_handle,$meterId,THIS_HOUR,NOW,TWO_MIN); ?>
-
-<?php graphKwhConsumed("Hourly Usage Today",$hourly_db_handle,$meterId,TODAY,NOW,HOURLY); ?>
-<?php graphKwhConsumed("Hourly Usage Yesterday",$hourly_db_handle,$meterId,YESTERDAY,TODAY,HOURLY); ?>
-
-<?php //graphKwhConsumed("Hourly Past 72 Hours",$hourly_db_handle,$meterId,NOW-(72*HOURLY),NOW,HOURLY); ?>
-
-<?php graphKwhConsumed("Daily Usage This Month",$hourly_db_handle,$meterId,THIS_MONTH,TODAY,DAILY); ?>
-<?php graphKwhConsumed("Daily Usage Last Month",$hourly_db_handle,$meterId,LAST_MONTH,THIS_MONTH,DAILY); ?>
-
-<?php graphKwhConsumed("Monthly Usage This Year",$hourly_db_handle,$meterId,THIS_YEAR,TODAY,MONTHLY); ?>
-<?php graphKwhConsumed("Monthly Usage Last Year",$hourly_db_handle,$meterId,LAST_YEAR,THIS_YEAR,MONTHLY); ?>
 </center>
 
 <br><br><br><br>
@@ -503,8 +512,8 @@ else //meter ID specified
 </body>
 </html>
 
-
-
 <?php
-}
+} //end IF meterId
 ?>
+
+
