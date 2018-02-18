@@ -11,7 +11,7 @@ fi
 
 echo '**** Installing dependencies ****'
 apt-get update
-apt-get -y install git golang-go php
+apt-get -y install git golang-go php php*-sqlite
 
 echo '**** Installing rtlamr decoder ****'
 mkdir -p /opt/rtlamr

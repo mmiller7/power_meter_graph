@@ -187,19 +187,19 @@ function graphKwhConsumed($graphName,$db_handle,$startTime,$endTime,$interval,$o
 		//Now that we have all the data, let's try and draw the graph
 		?>
 		<div id="<?php echo $graphName; ?>"><!-- Plotly chart will be drawn inside this DIV --></div>
-			<script>
-				var data = [
-					{
-						<?php echo $x.PHP_EOL; ?>
-						<?php echo $y.PHP_EOL; ?>
-						//x: ['giraffes', 'orangutans', 'monkeys'],
-						//y: [20, 14, 23],
-						marker: {
-							<?php echo $color.PHP_EOL; ?>
-							//color: 'rgb(51, 51, 153)'
-						},
-						type: 'bar',
-					}
+		<script>
+			var data = [
+				{
+					<?php echo $x.PHP_EOL; ?>
+					<?php echo $y.PHP_EOL; ?>
+					//x: ['giraffes', 'orangutans', 'monkeys'],
+					//y: [20, 14, 23],
+					marker: {
+						<?php echo $color.PHP_EOL; ?>
+						//color: 'rgb(51, 51, 153)'
+					},
+					type: 'bar',
+				}
 			];
 			var layout = {
 				title: '<?php echo "$graphName (Total Usage: ".number_format($totalKwhUsed,2).")"; ?>',
