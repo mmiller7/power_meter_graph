@@ -67,8 +67,7 @@ function insertDbFunction($db_handle,$interval,$rxTimeStr,$meterId,$meterKwh,$cl
 	$prevTime=intval($rxTime/$interval)*$interval; //3600 sec per hour, drop fractional part then multiply back
 
 	//Check if we already have a record for the time
-	//TODO: Also check meter ID here in case multiple meters for same timestamp are being used
-	$query_string='SELECT * FROM readings WHERE timestamp == '.$prevTime;
+	$query_string='SELECT * FROM readings WHERE meter_id == '.$meterId.' AND timestamp == '.$prevTime;
 	$result     = $db_handle->query($query_string);
 	$row        = $result->fetchArray();
 
