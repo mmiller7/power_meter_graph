@@ -7,7 +7,7 @@
 // Note - the command you run must match the decoder specified below
 
 //Database connect
-include 'system_config.php'
+include 'system_config.php';
 
 //some constants for intervals of interest
 define('NOW',time()); //Current local time as UTC timestamp
