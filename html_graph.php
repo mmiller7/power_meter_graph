@@ -387,8 +387,8 @@ function estimateCurrentPower($db_handle,$meterId)
 		//Multiply to cancel time-units and get power
 		$estimatedPower=$kwhUsed*$timeScalor;
 
-		//echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">Estimated Current Power Draw - '.number_format($estimatedPower,2).'kWh avg over past '.number_format($eTimeSeconds,0).' seconds</p>'.PHP_EOL;
-		echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">Estimated Current Power Draw - '.number_format($estimatedPower,2).'kWh</p>'.PHP_EOL;
+		//echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">Estimated Current Power Draw - '.number_format($estimatedPower,2).'kW avg over past '.number_format($eTimeSeconds,0).' seconds</p>'.PHP_EOL;
+		echo '<p style="font-family: \'Open Sans\', verdana, arial, sans-serif;">Estimated Current Power Draw - '.number_format($estimatedPower,2).'kW</p>'.PHP_EOL;
 	}
 }
 
