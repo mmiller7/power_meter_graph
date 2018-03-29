@@ -13,17 +13,21 @@ define('DEBUG', false);
 include 'system_config.php';
 
 //some constants for intervals of interest
-define('NOW',time()); //Current local time as UTC timestamp
+//Note - can't use "NOW" because we need dynamic time() not just start of script
 define('MINUTE', 60); //Seconds in minute
 define('FIVE_MIN', 300); //Seconds in 5-min
 define('TEN_MIN', 600); //Seconds in 10-min
 define('HOURLY', 3600); //Seconds in hour
 define('DAILY', 86400); //Seconds in day
 
+echo date('D j M H:i:s T Y')." - rtlamr2sqlite.php - started".PHP_EOL;
+echo "DEBUG="; var_dump(DEBUG);
+
 //Open stdin to process data
 $f = fopen( 'php://stdin', 'r' );
 
 //Process incoming data line by line
+echo "Beginning stdin processing loop...".DEBUG.PHP_EOL;
 while( $line = fgets( $f ) )
 {
 //***************************************
@@ -49,10 +53,11 @@ while( $line = fgets( $f ) )
 
 	if(isset($minute_db_handle))
 	{
-		insertDbFunction($minute_db_handle,MINUTE,$rxTimeStr,$meterId,$meterKwh,NOW-(2*DAILY));
+		insertDbFunction($minute_db_handle,MINUTE,$rxTimeStr,$meterId,$meterKwh,time()-(2*DAILY));
 	}
 
 }
+echo "End of stdin processing loop.".PHP_EOL;
 
 
 //This function takes the raw meter readings and puts it into the database at specified interval
@@ -108,5 +113,5 @@ function insertDbFunction($db_handle,$interval,$rxTimeStr,$meterId,$meterKwh,$cl
 
 
 fclose( $f );
-
+echo "rtlamr2sqlite.php - done".PHP_EOL;
 ?>
