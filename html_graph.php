@@ -202,7 +202,7 @@ function graphKwhConsumed($graphName,$db_handle,$meterId,$startTime,$endTime,$in
 				}
 			];
 			var layout = {
-				title: '<?php echo "$graphName (Total Usage: ".number_format($totalKwhUsed,2).")"; ?>',
+				title: '<?php echo "$graphName (Total Usage: ".number_format($totalKwhUsed,2)." kWh)"; ?>',
 				yaxis: {
 					fixedrange: true,
 					zeroline: true,
