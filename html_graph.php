@@ -19,7 +19,8 @@ define('TEN_MIN', 600); //Seconds in 10-min
 define('HOURLY', 3600); //Seconds in hour
 define('DAILY', 86400); //Seconds in day
 define('WEEKLY', 604800); //Seconds in week
-define('MONTHLY', 2629743); //Seconds in month (avg 30.44 days)
+#define('MONTHLY', 2629743); //Seconds in month (avg 30.44 days)
+define('MONTHLY', 2628000); //Seconds in month (730 hours, must be multiple of 3600)
 
 define('NOW',time()); //Current local time as UTC timestamp
 define('THIS_HOUR',intval(NOW/3600)*3600);
@@ -501,8 +502,8 @@ if($meterId !== false) //no meter ID specified
 	graphKwhConsumed("Daily Usage This Month",$hourly_db_handle,$meterId,THIS_MONTH,TODAY,DAILY);
 	graphKwhConsumed("Daily Usage Last Month",$hourly_db_handle,$meterId,LAST_MONTH,THIS_MONTH,DAILY);
 
-	graphKwhConsumed("Monthly Usage This Year",$hourly_db_handle,$meterId,THIS_YEAR,TODAY,MONTHLY);
-	graphKwhConsumed("Monthly Usage Last Year",$hourly_db_handle,$meterId,LAST_YEAR,THIS_YEAR,MONTHLY);
+	graphKwhConsumed("Monthly Usage This Year",$hourly_db_handle,$meterId,THIS_YEAR,TODAY,MONTHLY,(BILLING_OFFSET*DAILY));
+	graphKwhConsumed("Monthly Usage Last Year",$hourly_db_handle,$meterId,LAST_YEAR,THIS_YEAR,MONTHLY,(BILLING_OFFSET*DAILY));
 ?>
 
 </center>
